@@ -132,7 +132,7 @@ export const ChannelsModal: React.FC<ChannelsModalProps> = ({
                 <label className="block text-[11px] text-gray-400 mb-1">Creator / Channel Name</label>
                 <input
                   type="text"
-                  placeholder="e.g. Football Daily, ESPN FC"
+                  placeholder="e.g. Star Sports, Sports Tak, BCCI"
                   value={channelName}
                   onChange={(e) => setChannelName(e.target.value)}
                   className="w-full bg-[#0a0d14] border border-gray-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-pink-400"
