@@ -196,6 +196,16 @@ export async function toggleSaveTranscript(id: string, isSaved: boolean): Promis
   return json.data;
 }
 
+export async function translateTranscriptApi(id: string): Promise<TranscriptItem> {
+  const res = await fetch(`${API_BASE_URL}/transcripts/${id}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Failed to translate transcript');
+  return json.data;
+}
+
 export async function deleteTranscript(id: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/transcripts/${id}`, {
     method: 'DELETE',

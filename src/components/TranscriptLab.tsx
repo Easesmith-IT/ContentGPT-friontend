@@ -8,6 +8,7 @@ import {
   fetchTranscripts,
   toggleSaveTranscript,
   deleteTranscript,
+  translateTranscriptApi,
 } from '../services/api';
 import { ScriptModal } from './ScriptModal';
 import {
@@ -70,9 +71,56 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const [historySearch, setHistorySearch] = useState<string>('');
 
+  // AI Translation State
+  const [translating, setTranslating] = useState<boolean>(false);
+
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setFeedback({ message, type });
     setTimeout(() => setFeedback(null), 5000);
+  };
+
+  // Check if a language text needs Gemini translation
+  const needsTranslation = (lang: 'english' | 'hinglish', item: TranscriptItem | null): boolean => {
+    if (!item) return false;
+    const orig = item.cleanText?.original || '';
+    const hasDevanagari = /[\u0900-\u097F]/.test(orig);
+    if (!hasDevanagari) return false;
+
+    if (lang === 'english') {
+      const eng = item.cleanText?.english || '';
+      return !eng || eng === orig || /[\u0900-\u097F]/.test(eng);
+    }
+    if (lang === 'hinglish') {
+      const hing = item.cleanText?.hinglish || '';
+      return !hing || hing === orig || /[\u0900-\u097F]/.test(hing);
+    }
+    return false;
+  };
+
+  // Perform translation with Gemini
+  const handleTranslateWithGemini = async (targetLang?: 'english' | 'hinglish') => {
+    if (!activeTranscript) return;
+    try {
+      setTranslating(true);
+      showToast('Translating with Gemini 3.5 Flash...', 'info');
+      const updated = await translateTranscriptApi(activeTranscript._id);
+      setActiveTranscript(updated);
+      setHistory((prev) => prev.map((h) => (h._id === updated._id ? updated : h)));
+      showToast('Successfully translated with Gemini!', 'success');
+      if (targetLang) setActiveLanguage(targetLang);
+    } catch (err: any) {
+      showToast(err.message || 'Translation failed', 'error');
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  // Handle switching language tab with auto-translation if needed
+  const handleLanguageSelect = async (lang: 'english' | 'hinglish' | 'original') => {
+    setActiveLanguage(lang);
+    if (lang !== 'original' && needsTranslation(lang, activeTranscript) && !translating) {
+      await handleTranslateWithGemini(lang);
+    }
   };
 
   // Load past transcripts
@@ -199,14 +247,31 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
   // Export as .TXT
   const handleExportTxt = () => {
     if (!activeTranscript) return;
-    let content = `Title: ${activeTranscript.title}\nCreator: ${activeTranscript.creatorName}\nSource: ${activeTranscript.sourceUrl}\n\n`;
-    content += activeTranscript.segments.map((s) => `[${s.timestamp}] ${s.textOriginal}`).join('\n');
+    let content = `Title: ${activeTranscript.title}\nCreator: ${activeTranscript.creatorName}\nLanguage: ${activeLanguage.toUpperCase()}\nSource: ${activeTranscript.sourceUrl}\n\n`;
+    if (showTimestamps && activeTranscript.segments && activeTranscript.segments.length > 0) {
+      content += activeTranscript.segments
+        .map((s) => {
+          let lineText = s.textOriginal;
+          if (activeLanguage === 'english' && s.textEnglish) lineText = s.textEnglish;
+          if (activeLanguage === 'hinglish' && s.textHinglish) lineText = s.textHinglish;
+          return `[${s.timestamp}] ${lineText}`;
+        })
+        .join('\n');
+    } else {
+      const text =
+        activeLanguage === 'english'
+          ? activeTranscript.cleanText.english || activeTranscript.cleanText.original
+          : activeLanguage === 'hinglish'
+          ? activeTranscript.cleanText.hinglish || activeTranscript.cleanText.original
+          : activeTranscript.cleanText.original;
+      content += text;
+    }
 
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeTranscript.title.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_')}_transcript.txt`;
+    a.download = `${activeTranscript.title.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_')}_${activeLanguage}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -532,27 +597,36 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
               <div className="flex items-center gap-1 bg-[#0a0d14] p-1 rounded-xl border border-gray-800 text-xs">
                 <Languages className="w-3.5 h-3.5 text-gray-400 ml-1.5" />
                 <button
-                  onClick={() => setActiveLanguage('english')}
-                  className={`px-2 py-1 rounded-lg transition-colors ${
+                  type="button"
+                  onClick={() => handleLanguageSelect('english')}
+                  className={`px-2 py-1 rounded-lg transition-colors flex items-center gap-1 ${
                     activeLanguage === 'english'
                       ? 'bg-pink-500/20 text-pink-300 font-bold'
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
-                  English
+                  {translating && activeLanguage === 'english' && (
+                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-pink-400" />
+                  )}
+                  <span>English</span>
                 </button>
                 <button
-                  onClick={() => setActiveLanguage('hinglish')}
-                  className={`px-2 py-1 rounded-lg transition-colors ${
+                  type="button"
+                  onClick={() => handleLanguageSelect('hinglish')}
+                  className={`px-2 py-1 rounded-lg transition-colors flex items-center gap-1 ${
                     activeLanguage === 'hinglish'
                       ? 'bg-pink-500/20 text-pink-300 font-bold'
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
-                  Hinglish
+                  {translating && activeLanguage === 'hinglish' && (
+                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-pink-400" />
+                  )}
+                  <span>Hinglish</span>
                 </button>
                 <button
-                  onClick={() => setActiveLanguage('original')}
+                  type="button"
+                  onClick={() => handleLanguageSelect('original')}
                   className={`px-2 py-1 rounded-lg transition-colors ${
                     activeLanguage === 'original'
                       ? 'bg-pink-500/20 text-pink-300 font-bold'
@@ -562,6 +636,18 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
                   Original
                 </button>
               </div>
+
+              {/* Force AI Translation Button */}
+              <button
+                type="button"
+                onClick={() => handleTranslateWithGemini()}
+                disabled={translating}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-semibold bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border-pink-500/30 transition-colors disabled:opacity-50 active:scale-95"
+                title="Translate transcript into English and Roman Hinglish with Gemini 3.5 Flash"
+              >
+                <Sparkles className={`w-3.5 h-3.5 text-pink-400 ${translating ? 'animate-spin' : ''}`} />
+                <span>{translating ? 'Translating...' : 'AI Translate'}</span>
+              </button>
 
               {/* Copy & Export */}
               <button
@@ -586,11 +672,19 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
           <div className="px-4 sm:px-5 pb-5">
             {activeTab === 'transcript' && (
               <div className="p-4 rounded-2xl bg-[#090c14] border border-gray-800/80 max-h-[500px] overflow-y-auto space-y-2 text-xs sm:text-sm text-gray-200 leading-relaxed font-sans">
-                {showTimestamps && activeTranscript.segments && activeTranscript.segments.length > 0 ? (
+                {translating ? (
+                  <div className="py-12 px-4 text-center space-y-3">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto text-pink-400" />
+                    <p className="text-sm font-bold text-white">Translating with Gemini 3.5 Flash...</p>
+                    <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                      Translating Hindi audio transcript to natural English and Roman-alphabet Hinglish.
+                    </p>
+                  </div>
+                ) : showTimestamps && activeTranscript.segments && activeTranscript.segments.length > 0 ? (
                   activeTranscript.segments.map((seg, idx) => {
                     let text = seg.textOriginal;
                     if (activeLanguage === 'english' && seg.textEnglish) text = seg.textEnglish;
-                    if (activeLanguage === 'hinglish' && seg.textHinglish) text = seg.textHinglish;
+                    else if (activeLanguage === 'hinglish' && seg.textHinglish) text = seg.textHinglish;
 
                     return (
                       <div key={idx} className="flex items-start gap-2.5 py-1 hover:bg-[#121622]/50 px-2 rounded-lg transition-colors group">
@@ -612,7 +706,7 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
                     );
                   })
                 ) : (
-                  <p className="whitespace-pre-wrap">
+                  <p className="whitespace-pre-wrap leading-relaxed text-gray-300">
                     {activeLanguage === 'english'
                       ? activeTranscript.cleanText.english || activeTranscript.cleanText.original
                       : activeLanguage === 'hinglish'
@@ -750,7 +844,10 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
             {history.map((item) => (
               <div
                 key={item._id}
-                onClick={() => setActiveTranscript(item)}
+                onClick={() => {
+                  setActiveTranscript(item);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                   activeTranscript?._id === item._id
                     ? 'bg-pink-500/10 border-pink-500/40 shadow-sm'
