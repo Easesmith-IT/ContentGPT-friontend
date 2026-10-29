@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScriptDraftResult } from '../types';
 import { generateScriptFromTranscript } from '../services/api';
 import { X, Sparkles, Copy, Check, Clock, FileText, Video, Radio, Flame } from 'lucide-react';
@@ -8,6 +8,7 @@ import { X, Sparkles, Copy, Check, Clock, FileText, Video, Radio, Flame } from '
 interface ScriptModalProps {
   transcriptId: string;
   transcriptTitle: string;
+  initialNotes?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -15,15 +16,22 @@ interface ScriptModalProps {
 export const ScriptModal: React.FC<ScriptModalProps> = ({
   transcriptId,
   transcriptTitle,
+  initialNotes = '',
   isOpen,
   onClose,
 }) => {
   const [format, setFormat] = useState<'SHORT' | 'LONG'>('SHORT');
-  const [creatorNotes, setCreatorNotes] = useState<string>('');
+  const [creatorNotes, setCreatorNotes] = useState<string>(initialNotes);
   const [loading, setLoading] = useState<boolean>(false);
   const [scriptResult, setScriptResult] = useState<ScriptDraftResult | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialNotes) {
+      setCreatorNotes(initialNotes);
+    }
+  }, [initialNotes]);
 
   if (!isOpen) return null;
 

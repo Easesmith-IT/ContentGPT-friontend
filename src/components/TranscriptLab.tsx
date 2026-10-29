@@ -30,6 +30,8 @@ import {
   RefreshCw,
   Search,
   Languages,
+  Play,
+  PlayCircle,
 } from 'lucide-react';
 
 interface TranscriptLabProps {
@@ -54,6 +56,10 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
 
   // Script Studio Bridge
   const [scriptModalOpen, setScriptModalOpen] = useState<boolean>(false);
+  const [scriptNotes, setScriptNotes] = useState<string>('');
+
+  // Media Player Toggle
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
 
   // Upload Fallback Modal
   const [uploadModalOpen, setUploadModalOpen] = useState<boolean>(false);
@@ -411,8 +417,24 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
               </div>
             </div>
 
-            {/* Primary Action: Draft Script in Studio */}
-            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            {/* Primary Action: Draft Script in Studio + Watch Video Toggle */}
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
+              {activeTranscript.sourcePlatform === 'YOUTUBE' && activeTranscript.videoId && (
+                <button
+                  type="button"
+                  onClick={() => setShowPlayer(!showPlayer)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    showPlayer
+                      ? 'bg-pink-500/20 text-pink-300 border-pink-500/40'
+                      : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-white'
+                  }`}
+                  title="Toggle Embedded Video Player"
+                >
+                  <Play className="w-3.5 h-3.5 text-pink-400" />
+                  <span>{showPlayer ? 'Hide Video' : 'Watch Video'}</span>
+                </button>
+              )}
+
               <button
                 onClick={handleToggleSave}
                 className={`p-2.5 rounded-xl border transition-colors ${
@@ -426,7 +448,10 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
               </button>
 
               <button
-                onClick={() => setScriptModalOpen(true)}
+                onClick={() => {
+                  setScriptNotes('');
+                  setScriptModalOpen(true);
+                }}
                 className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-95"
               >
                 <span>Draft Script in Studio</span>
@@ -434,6 +459,21 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Embedded Video Player (if toggled) */}
+          {showPlayer && activeTranscript.sourcePlatform === 'YOUTUBE' && activeTranscript.videoId && (
+            <div className="px-4 sm:px-5 pt-1 animate-fade-in">
+              <div className="relative aspect-video max-w-2xl mx-auto rounded-2xl overflow-hidden border border-gray-800 shadow-2xl bg-black">
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${activeTranscript.videoId}?autoplay=1`}
+                  title={activeTranscript.title}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
 
           {/* Controls Bar: Timestamps ON/OFF + Language Switcher + Copy/Export */}
           <div className="px-4 sm:px-5 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -553,10 +593,20 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
                     if (activeLanguage === 'hinglish' && seg.textHinglish) text = seg.textHinglish;
 
                     return (
-                      <div key={idx} className="flex items-start gap-2.5 py-1 hover:bg-[#121622]/50 px-2 rounded-lg transition-colors">
-                        <span className="font-mono text-pink-400 text-xs shrink-0 select-none">
-                          {seg.timestamp}
-                        </span>
+                      <div key={idx} className="flex items-start gap-2.5 py-1 hover:bg-[#121622]/50 px-2 rounded-lg transition-colors group">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeTranscript.sourcePlatform === 'YOUTUBE' && activeTranscript.videoId) {
+                              window.open(`https://www.youtube.com/watch?v=${activeTranscript.videoId}&t=${Math.floor(seg.start)}s`, '_blank');
+                            }
+                          }}
+                          title="Click to jump to this moment in video ↗"
+                          className="font-mono text-pink-400 group-hover:text-pink-300 text-xs shrink-0 select-none bg-pink-500/10 hover:bg-pink-500/20 px-1.5 py-0.5 rounded border border-pink-500/20 cursor-pointer flex items-center gap-1 transition-colors"
+                        >
+                          <Clock className="w-3 h-3 text-pink-400" />
+                          <span>{seg.timestamp}</span>
+                        </button>
                         <p className="flex-1 text-gray-300">{text}</p>
                       </div>
                     );
@@ -600,8 +650,18 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
                     </h4>
                     <div className="space-y-2">
                       {activeTranscript.keyQuotes.map((q, idx) => (
-                        <div key={idx} className="p-3 rounded-xl bg-[#121622] border-l-2 border-pink-400 text-xs sm:text-sm italic text-gray-200">
-                          "{q}"
+                        <div key={idx} className="p-3 rounded-xl bg-[#121622] border-l-2 border-pink-400 text-xs sm:text-sm text-gray-200 flex items-start justify-between gap-3">
+                          <p className="italic flex-1">"{q}"</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScriptNotes(`Focus around this quote from ${activeTranscript.creatorName}: "${q}"`);
+                              setScriptModalOpen(true);
+                            }}
+                            className="text-[11px] font-bold text-pink-400 hover:text-pink-300 shrink-0 bg-pink-500/10 hover:bg-pink-500/20 px-2 py-1 rounded-lg border border-pink-500/20 transition-colors"
+                          >
+                            + Draft Script ↗
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -622,12 +682,15 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
                       key={idx}
                       className="p-3.5 rounded-xl bg-[#121622] border border-gray-800 text-xs sm:text-sm text-gray-200 flex items-center justify-between gap-3"
                     >
-                      <span>{angle}</span>
+                      <span className="flex-1">{angle}</span>
                       <button
-                        onClick={() => setScriptModalOpen(true)}
-                        className="text-[11px] text-pink-400 hover:text-pink-300 font-bold shrink-0"
+                        onClick={() => {
+                          setScriptNotes(`Angle / hook: ${angle}`);
+                          setScriptModalOpen(true);
+                        }}
+                        className="text-[11px] text-pink-400 hover:text-pink-300 font-bold shrink-0 bg-pink-500/10 hover:bg-pink-500/20 px-2.5 py-1 rounded-lg border border-pink-500/20 transition-colors"
                       >
-                        Script This ↗
+                        + Draft Script ↗
                       </button>
                     </div>
                   ))}
@@ -643,8 +706,12 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
         <ScriptModal
           transcriptId={activeTranscript._id}
           transcriptTitle={activeTranscript.title}
+          initialNotes={scriptNotes}
           isOpen={scriptModalOpen}
-          onClose={() => setScriptModalOpen(false)}
+          onClose={() => {
+            setScriptModalOpen(false);
+            setScriptNotes('');
+          }}
         />
       )}
 
