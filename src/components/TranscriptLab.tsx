@@ -6,6 +6,7 @@ import {
   transcribeLink,
   uploadAndTranscribeMedia,
   fetchTranscripts,
+  fetchTranscriptById,
   toggleSaveTranscript,
   deleteTranscript,
   translateTranscriptApi,
@@ -88,11 +89,19 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
 
     if (lang === 'english') {
       const eng = item.cleanText?.english || '';
-      return !eng || eng === orig || /[\u0900-\u097F]/.test(eng);
+      if (!eng || eng === orig || /[\u0900-\u097F]/.test(eng)) return true;
+      if (item.segments && item.segments.length > 0) {
+        return item.segments.some((s) => !s.textEnglish || /[\u0900-\u097F]/.test(s.textEnglish));
+      }
+      return false;
     }
     if (lang === 'hinglish') {
       const hing = item.cleanText?.hinglish || '';
-      return !hing || hing === orig || /[\u0900-\u097F]/.test(hing);
+      if (!hing || hing === orig || /[\u0900-\u097F]/.test(hing)) return true;
+      if (item.segments && item.segments.length > 0) {
+        return item.segments.some((s) => !s.textHinglish || /[\u0900-\u097F]/.test(s.textHinglish));
+      }
+      return false;
     }
     return false;
   };
@@ -231,18 +240,24 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
     if (!activeTranscript) return;
 
     let textToCopy = '';
+    const cleanEng = activeTranscript.cleanText.english && !/[\u0900-\u097F]/.test(activeTranscript.cleanText.english) ? activeTranscript.cleanText.english : '';
+    const cleanHing = activeTranscript.cleanText.hinglish && !/[\u0900-\u097F]/.test(activeTranscript.cleanText.hinglish) ? activeTranscript.cleanText.hinglish : '';
+
     if (showTimestamps && activeTranscript.segments && activeTranscript.segments.length > 0) {
       textToCopy = activeTranscript.segments
         .map((s) => {
           let lineText = s.textOriginal;
-          if (activeLanguage === 'english' && s.textEnglish) lineText = s.textEnglish;
-          if (activeLanguage === 'hinglish' && s.textHinglish) lineText = s.textHinglish;
+          if (activeLanguage === 'english') {
+            lineText = s.textEnglish && !/[\u0900-\u097F]/.test(s.textEnglish) ? s.textEnglish : (cleanEng || s.textOriginal);
+          } else if (activeLanguage === 'hinglish') {
+            lineText = s.textHinglish && !/[\u0900-\u097F]/.test(s.textHinglish) ? s.textHinglish : (cleanHing || s.textOriginal);
+          }
           return `[${s.timestamp}] ${lineText}`;
         })
         .join('\n');
     } else {
-      if (activeLanguage === 'english') textToCopy = activeTranscript.cleanText.english || activeTranscript.cleanText.original;
-      else if (activeLanguage === 'hinglish') textToCopy = activeTranscript.cleanText.hinglish || activeTranscript.cleanText.original;
+      if (activeLanguage === 'english') textToCopy = cleanEng || activeTranscript.cleanText.original;
+      else if (activeLanguage === 'hinglish') textToCopy = cleanHing || activeTranscript.cleanText.original;
       else textToCopy = activeTranscript.cleanText.original;
     }
 
@@ -255,22 +270,28 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
   // Export as .TXT
   const handleExportTxt = () => {
     if (!activeTranscript) return;
+    const cleanEng = activeTranscript.cleanText.english && !/[\u0900-\u097F]/.test(activeTranscript.cleanText.english) ? activeTranscript.cleanText.english : '';
+    const cleanHing = activeTranscript.cleanText.hinglish && !/[\u0900-\u097F]/.test(activeTranscript.cleanText.hinglish) ? activeTranscript.cleanText.hinglish : '';
+
     let content = `Title: ${activeTranscript.title}\nCreator: ${activeTranscript.creatorName}\nLanguage: ${activeLanguage.toUpperCase()}\nSource: ${activeTranscript.sourceUrl}\n\n`;
     if (showTimestamps && activeTranscript.segments && activeTranscript.segments.length > 0) {
       content += activeTranscript.segments
         .map((s) => {
           let lineText = s.textOriginal;
-          if (activeLanguage === 'english' && s.textEnglish) lineText = s.textEnglish;
-          if (activeLanguage === 'hinglish' && s.textHinglish) lineText = s.textHinglish;
+          if (activeLanguage === 'english') {
+            lineText = s.textEnglish && !/[\u0900-\u097F]/.test(s.textEnglish) ? s.textEnglish : (cleanEng || s.textOriginal);
+          } else if (activeLanguage === 'hinglish') {
+            lineText = s.textHinglish && !/[\u0900-\u097F]/.test(s.textHinglish) ? s.textHinglish : (cleanHing || s.textOriginal);
+          }
           return `[${s.timestamp}] ${lineText}`;
         })
         .join('\n');
     } else {
       const text =
         activeLanguage === 'english'
-          ? activeTranscript.cleanText.english || activeTranscript.cleanText.original
+          ? cleanEng || activeTranscript.cleanText.original
           : activeLanguage === 'hinglish'
-          ? activeTranscript.cleanText.hinglish || activeTranscript.cleanText.original
+          ? cleanHing || activeTranscript.cleanText.original
           : activeTranscript.cleanText.original;
       content += text;
     }
@@ -691,8 +712,19 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
                 ) : showTimestamps && activeTranscript.segments && activeTranscript.segments.length > 0 ? (
                   activeTranscript.segments.map((seg, idx) => {
                     let text = seg.textOriginal;
-                    if (activeLanguage === 'english' && seg.textEnglish) text = seg.textEnglish;
-                    else if (activeLanguage === 'hinglish' && seg.textHinglish) text = seg.textHinglish;
+                    if (activeLanguage === 'english') {
+                      text = seg.textEnglish && !/[\u0900-\u097F]/.test(seg.textEnglish)
+                        ? seg.textEnglish
+                        : (activeTranscript.cleanText.english && !/[\u0900-\u097F]/.test(activeTranscript.cleanText.english)
+                           ? activeTranscript.cleanText.english
+                           : seg.textOriginal);
+                    } else if (activeLanguage === 'hinglish') {
+                      text = seg.textHinglish && !/[\u0900-\u097F]/.test(seg.textHinglish)
+                        ? seg.textHinglish
+                        : (activeTranscript.cleanText.hinglish && !/[\u0900-\u097F]/.test(activeTranscript.cleanText.hinglish)
+                           ? activeTranscript.cleanText.hinglish
+                           : seg.textOriginal);
+                    }
 
                     return (
                       <div key={idx} className="flex items-start gap-2.5 py-1 hover:bg-[#121622]/50 px-2 rounded-lg transition-colors group">
@@ -714,13 +746,45 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
                     );
                   })
                 ) : (
-                  <p className="whitespace-pre-wrap leading-relaxed text-gray-300">
-                    {activeLanguage === 'english'
-                      ? activeTranscript.cleanText.english || activeTranscript.cleanText.original
-                      : activeLanguage === 'hinglish'
-                      ? activeTranscript.cleanText.hinglish || activeTranscript.cleanText.original
-                      : activeTranscript.cleanText.original}
-                  </p>
+                  <div>
+                    {activeLanguage === 'hinglish' && (!activeTranscript.cleanText.hinglish || /[\u0900-\u097F]/.test(activeTranscript.cleanText.hinglish)) ? (
+                      <div className="p-4 rounded-xl bg-pink-500/10 border border-pink-500/30 text-center space-y-2.5 my-2">
+                        <p className="text-pink-300 font-semibold text-xs sm:text-sm">
+                          Roman Hinglish translation is not ready yet.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslateWithGemini('hinglish')}
+                          className="px-3.5 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-400 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow active:scale-95 transition-all"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Generate Roman Hinglish with Gemini</span>
+                        </button>
+                      </div>
+                    ) : activeLanguage === 'english' && (!activeTranscript.cleanText.english || /[\u0900-\u097F]/.test(activeTranscript.cleanText.english)) ? (
+                      <div className="p-4 rounded-xl bg-pink-500/10 border border-pink-500/30 text-center space-y-2.5 my-2">
+                        <p className="text-pink-300 font-semibold text-xs sm:text-sm">
+                          English translation is not ready yet.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleTranslateWithGemini('english')}
+                          className="px-3.5 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-400 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow active:scale-95 transition-all"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Translate to English with Gemini</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap leading-relaxed text-gray-300">
+                        {activeLanguage === 'english'
+                          ? activeTranscript.cleanText.english || activeTranscript.cleanText.original
+                          : activeLanguage === 'hinglish'
+                          ? activeTranscript.cleanText.hinglish || activeTranscript.cleanText.original
+                          : activeTranscript.cleanText.original}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -852,9 +916,15 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
             {history.map((item) => (
               <div
                 key={item._id}
-                onClick={() => {
+                onClick={async () => {
                   setActiveTranscript(item);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
+                  try {
+                    const full = await fetchTranscriptById(item._id);
+                    if (full) setActiveTranscript(full);
+                  } catch {
+                    // Keep list item if fetch fails
+                  }
                 }}
                 className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                   activeTranscript?._id === item._id
