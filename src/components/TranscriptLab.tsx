@@ -316,37 +316,61 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
       {/* Upload Fallback Modal */}
       {uploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0e121d] border border-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border-pink-500/20">
+          <div className="bg-[#0e121d] border border-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border-pink-500/20">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Upload className="w-4 h-4 text-pink-400" />
-                <span>Upload Audio or Video for Transcription</span>
+                <span>Transcribe Instagram Reel or Media File</span>
               </h3>
               <button
                 onClick={() => setUploadModalOpen(false)}
-                className="text-gray-400 hover:text-white p-1"
+                className="text-gray-400 hover:text-white p-1 text-base leading-none"
               >
                 ✕
               </button>
             </div>
-            <p className="text-xs text-gray-400">
-              Upload an MP4, MOV, MP3, or M4A file (up to 50MB). Gemini Multimodal Audio will transcribe it word-for-word with timestamps.
-            </p>
 
-            <label className="border-2 border-dashed border-gray-800 hover:border-pink-500/50 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-[#0a0d14]/50 group">
-              <Upload className="w-8 h-8 text-gray-500 group-hover:text-pink-400 transition-colors" />
-              <span className="text-xs font-semibold text-gray-300 group-hover:text-white">
-                {uploading ? 'Uploading & Transcribing...' : 'Click or drop media file here'}
+            <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 text-xs text-pink-200/90 leading-relaxed">
+              <strong className="text-pink-300">Why Instagram links challenge cloud servers:</strong> Meta strictly blocks unauthenticated data-center IPs from downloading Reels. You have two ultra-fast solutions:
+            </div>
+
+            {/* Method 1: Drop Video/Audio */}
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 text-[11px] font-bold flex items-center justify-center">1</span>
+                Drop Reel Video / Audio (Instant Gemini Transcription):
               </span>
-              <span className="text-[10px] text-gray-500">Supports MP4, MOV, MP3, M4A, WAV</span>
-              <input
-                type="file"
-                accept="audio/*,video/*"
-                onChange={handleFileUpload}
-                disabled={uploading}
-                className="hidden"
-              />
-            </label>
+              <label className="border-2 border-dashed border-gray-800 hover:border-pink-500/50 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-[#0a0d14]/50 group">
+                <Upload className="w-8 h-8 text-gray-500 group-hover:text-pink-400 transition-colors" />
+                <span className="text-xs font-semibold text-gray-300 group-hover:text-white">
+                  {uploading ? 'Processing with Gemini 3.5 Flash...' : 'Click or drop Reel video here (.mp4, .mov, .mp3)'}
+                </span>
+                <span className="text-[10px] text-gray-500">Fast 1-tap processing up to 50MB</span>
+                <input
+                  type="file"
+                  accept="audio/*,video/*"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {/* Quick helper tip */}
+            <div className="pt-2 border-t border-gray-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-gray-400">
+              <div className="flex items-center gap-1">
+                <span>Need the Reel file?</span>
+                <a
+                  href={`https://fastdl.app/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-pink-400 hover:underline flex items-center gap-0.5"
+                >
+                  Save at FastDL <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <span className="text-gray-500">or add INSTAGRAM_SESSION_ID to .env</span>
+            </div>
           </div>
         </div>
       )}
