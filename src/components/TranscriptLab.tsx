@@ -420,7 +420,7 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Upload className="w-4 h-4 text-pink-400" />
-                <span>Transcribe Instagram Reel or Media File</span>
+                <span>{isYouTube ? 'Direct Audio/Video Upload' : 'Transcribe Instagram Reel or Media File'}</span>
               </h3>
               <button
                 onClick={() => setUploadModalOpen(false)}
@@ -431,19 +431,27 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
             </div>
 
             <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 text-xs text-pink-200/90 leading-relaxed">
-              <strong className="text-pink-300">Why Instagram links challenge cloud servers:</strong> Meta strictly blocks unauthenticated data-center IPs from downloading Reels. You have two ultra-fast solutions:
+              {isYouTube ? (
+                <>
+                  <strong className="text-pink-300">YouTube Cloud Fetch Notice:</strong> This video could not be fetched via public captions or cloud player. You can drop the video/audio file below for instant Gemini 3.5 Flash transcription.
+                </>
+              ) : (
+                <>
+                  <strong className="text-pink-300">Why Instagram links challenge cloud servers:</strong> Meta strictly blocks unauthenticated data-center IPs from downloading Reels. You have two ultra-fast solutions:
+                </>
+              )}
             </div>
 
             {/* Method 1: Drop Video/Audio */}
             <div className="space-y-2">
               <span className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
                 <span className="w-5 h-5 rounded-full bg-pink-500/20 text-pink-400 text-[11px] font-bold flex items-center justify-center">1</span>
-                Drop Reel Video / Audio (Instant Gemini Transcription):
+                Drop Video / Audio (Instant Gemini Transcription):
               </span>
               <label className="border-2 border-dashed border-gray-800 hover:border-pink-500/50 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-[#0a0d14]/50 group">
                 <Upload className="w-8 h-8 text-gray-500 group-hover:text-pink-400 transition-colors" />
                 <span className="text-xs font-semibold text-gray-300 group-hover:text-white">
-                  {uploading ? 'Processing with Gemini 3.5 Flash...' : 'Click or drop Reel video here (.mp4, .mov, .mp3)'}
+                  {uploading ? 'Processing with Gemini 3.5 Flash...' : 'Click or drop video/audio here (.mp4, .mov, .mp3)'}
                 </span>
                 <span className="text-[10px] text-gray-500">Fast 1-tap processing up to 50MB</span>
                 <input
