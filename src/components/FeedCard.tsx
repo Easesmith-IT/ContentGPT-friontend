@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ExternalLink, Star, Youtube, Instagram, MessageSquare, Globe, Newspaper, Clock, ThumbsUp, MessageCircle, Eye, ShieldCheck, Copy, Check } from 'lucide-react';
+import { ExternalLink, Star, Youtube, Instagram, MessageSquare, Globe, Newspaper, Clock, ThumbsUp, MessageCircle, Eye, ShieldCheck, Copy, Check, Zap } from 'lucide-react';
 import { ResearchItem } from '../types';
 
 interface FeedCardProps {
   item: ResearchItem;
   isCompact?: boolean;
   onToggleSave: (id: string, currentSaved: boolean) => void;
+  onTranscribe?: (url: string) => void;
 }
 
-export const FeedCard: React.FC<FeedCardProps> = ({ item, isCompact = false, onToggleSave }) => {
+export const FeedCard: React.FC<FeedCardProps> = ({ item, isCompact = false, onToggleSave, onTranscribe }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = async () => {
@@ -104,6 +105,16 @@ export const FeedCard: React.FC<FeedCardProps> = ({ item, isCompact = false, onT
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {(item.sourcePlatform === 'YOUTUBE' || item.sourcePlatform === 'INSTAGRAM') && onTranscribe && (
+            <button
+              onClick={() => onTranscribe(item.sourceUrl)}
+              className="p-2 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/25 transition-colors"
+              title="Transcribe this video"
+            >
+              <Zap className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           <button
             onClick={() => onToggleSave(item._id, item.isSaved)}
             className={`p-2 rounded-xl border transition-colors ${
@@ -233,6 +244,18 @@ export const FeedCard: React.FC<FeedCardProps> = ({ item, isCompact = false, onT
             {copied ? <Check className="w-3.5 h-3.5 text-pink-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
           </button>
+
+          {/* Quick Transcribe Button for YouTube & Instagram */}
+          {(item.sourcePlatform === 'YOUTUBE' || item.sourcePlatform === 'INSTAGRAM') && onTranscribe && (
+            <button
+              onClick={() => onTranscribe(item.sourceUrl)}
+              className="px-3 py-2 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 hover:text-white border border-pink-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 shrink-0 min-h-[38px]"
+              title="Transcribe video into text"
+            >
+              <Zap className="w-3 h-3 text-pink-400" />
+              <span>Transcribe</span>
+            </button>
+          )}
 
           {/* Primary CTA: Visit Real Source */}
           <a

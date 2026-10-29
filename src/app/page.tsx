@@ -7,6 +7,7 @@ import { PlatformFilter } from '../components/PlatformFilter';
 import { FeedCard } from '../components/FeedCard';
 import { ChannelsModal } from '../components/ChannelsModal';
 import { MobileBottomNav } from '../components/MobileBottomNav';
+import { TranscriptLab } from '../components/TranscriptLab';
 import {
   fetchFeeds,
   fetchAvailableDates,
@@ -28,6 +29,8 @@ export default function DashboardPage() {
   const [channels, setChannels] = useState<MonitoredChannel[]>([]);
 
   // Filter States
+  const [activeView, setActiveView] = useState<'feed' | 'transcribe'>('feed');
+  const [pendingTranscribeUrl, setPendingTranscribeUrl] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('ALL');
   const [currentPlatform, setCurrentPlatform] = useState<string>('ALL');
   const [isSavedOnly, setIsSavedOnly] = useState<boolean>(false);
@@ -168,6 +171,11 @@ export default function DashboardPage() {
     await loadMeta();
   };
 
+  const handleTranscribeCard = (url: string) => {
+    setPendingTranscribeUrl(url);
+    setActiveView('transcribe');
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0d14] text-gray-100 flex flex-col antialiased">
       {/* Top Header */}
@@ -177,6 +185,8 @@ export default function DashboardPage() {
         onScrape={handleScrape}
         onPurge={handlePurge}
         onOpenChannels={() => setChannelsModalOpen(true)}
+        activeView={activeView}
+        onSelectView={setActiveView}
       />
 
       {/* Main Content Area */}
@@ -203,132 +213,144 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Day Selector (Scraping Date Navigation) */}
-        <DaySelector
-          dates={dates}
-          selectedDate={selectedDate}
-          onSelectDate={(d) => {
-            setSelectedDate(d);
-            setPage(1);
-          }}
-        />
-
-        {/* Platform & Search Filter Bar */}
-        <PlatformFilter
-          currentPlatform={currentPlatform}
-          onSelectPlatform={(p) => {
-            setCurrentPlatform(p);
-            setPage(1);
-          }}
-          isSavedOnly={isSavedOnly}
-          onToggleSavedOnly={() => {
-            setIsSavedOnly(!isSavedOnly);
-            setPage(1);
-          }}
-          isPriorityOnly={isPriorityOnly}
-          onTogglePriorityOnly={() => {
-            setIsPriorityOnly(!isPriorityOnly);
-            setPage(1);
-          }}
-          searchQuery={searchQuery}
-          onSearchChange={(q) => {
-            setSearchQuery(q);
-            setPage(1);
-          }}
-          isCompactView={isCompactView}
-          onToggleCompactView={() => setIsCompactView(!isCompactView)}
-        />
-
-        {/* Results Counter & Skim Status */}
-        <div className="flex items-center justify-between text-xs text-gray-400 mb-3 px-1">
-          <div>
-            Showing <strong className="text-white">{feeds.length}</strong> of{' '}
-            <strong className="text-white">{totalItems}</strong> stories
-            {selectedDate !== 'ALL' && (
-              <span className="text-pink-300 font-medium"> for {selectedDate}</span>
-            )}
-            {isSavedOnly && <span className="text-pink-300 font-medium"> (Saved Vault)</span>}
-          </div>
-          {totalPages > 1 && (
-            <div>
-              Page {page} of {totalPages}
-            </div>
-          )}
-        </div>
-
-        {/* Feed Cards Grid */}
-        {loading ? (
-          <div className="py-20 text-center flex flex-col items-center justify-center gap-3 text-gray-500">
-            <RefreshCw className="w-6 h-6 animate-spin text-pink-400" />
-            <span className="text-xs">Loading sports intelligence feeds...</span>
-          </div>
-        ) : feeds.length > 0 ? (
-          isCompactView ? (
-            <div className="space-y-2 mb-8">
-              {feeds.map((item) => (
-                <FeedCard
-                  key={item._id}
-                  item={item}
-                  isCompact={true}
-                  onToggleSave={handleToggleSave}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 mb-8">
-              {feeds.map((item) => (
-                <FeedCard
-                  key={item._id}
-                  item={item}
-                  isCompact={false}
-                  onToggleSave={handleToggleSave}
-                />
-              ))}
-            </div>
-          )
+        {/* Mode View Switcher: Transcript Lab vs Feed Radar */}
+        {activeView === 'transcribe' ? (
+          <TranscriptLab
+            initialUrl={pendingTranscribeUrl}
+            onClearInitialUrl={() => setPendingTranscribeUrl('')}
+          />
         ) : (
-          <div className="py-16 text-center border border-gray-800/80 rounded-3xl bg-[#0f131f]/60 p-6 sm:p-8">
-            <AlertCircle className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-            <h3 className="text-sm font-semibold text-gray-300 mb-1">No feed items found</h3>
-            <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
-              {isSavedOnly
-                ? 'You have not saved any items to your Vault yet. Click the "Save" star on any feed card to protect it from 14-day auto-purge.'
-                : 'No stories match your current date or search filters. Try switching dates or run an immediate scrape.'}
-            </p>
-            {!isSavedOnly && (
-              <button
-                onClick={handleScrape}
-                disabled={isScraping}
-                className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white rounded-xl text-xs font-semibold shadow-md shadow-pink-500/25 transition-all inline-flex items-center gap-2 active:scale-95"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isScraping ? 'animate-spin' : ''}`} />
-                <span>Run Scrape Pipeline Now</span>
-              </button>
-            )}
-          </div>
-        )}
+          <>
+            {/* Day Selector (Scraping Date Navigation) */}
+            <DaySelector
+              dates={dates}
+              selectedDate={selectedDate}
+              onSelectDate={(d) => {
+                setSelectedDate(d);
+                setPage(1);
+              }}
+            />
 
-        {/* Pagination Bar */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 py-4 border-t border-gray-800/60 mb-6">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs text-gray-400 font-medium px-3">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+            {/* Platform & Search Filter Bar */}
+            <PlatformFilter
+              currentPlatform={currentPlatform}
+              onSelectPlatform={(p) => {
+                setCurrentPlatform(p);
+                setPage(1);
+              }}
+              isSavedOnly={isSavedOnly}
+              onToggleSavedOnly={() => {
+                setIsSavedOnly(!isSavedOnly);
+                setPage(1);
+              }}
+              isPriorityOnly={isPriorityOnly}
+              onTogglePriorityOnly={() => {
+                setIsPriorityOnly(!isPriorityOnly);
+                setPage(1);
+              }}
+              searchQuery={searchQuery}
+              onSearchChange={(q) => {
+                setSearchQuery(q);
+                setPage(1);
+              }}
+              isCompactView={isCompactView}
+              onToggleCompactView={() => setIsCompactView(!isCompactView)}
+            />
+
+            {/* Results Counter & Skim Status */}
+            <div className="flex items-center justify-between text-xs text-gray-400 mb-3 px-1">
+              <div>
+                Showing <strong className="text-white">{feeds.length}</strong> of{' '}
+                <strong className="text-white">{totalItems}</strong> stories
+                {selectedDate !== 'ALL' && (
+                  <span className="text-pink-300 font-medium"> for {selectedDate}</span>
+                )}
+                {isSavedOnly && <span className="text-pink-300 font-medium"> (Saved Vault)</span>}
+              </div>
+              {totalPages > 1 && (
+                <div>
+                  Page {page} of {totalPages}
+                </div>
+              )}
+            </div>
+
+            {/* Feed Cards Grid */}
+            {loading ? (
+              <div className="py-20 text-center flex flex-col items-center justify-center gap-3 text-gray-500">
+                <RefreshCw className="w-6 h-6 animate-spin text-pink-400" />
+                <span className="text-xs">Loading sports intelligence feeds...</span>
+              </div>
+            ) : feeds.length > 0 ? (
+              isCompactView ? (
+                <div className="space-y-2 mb-8">
+                  {feeds.map((item) => (
+                    <FeedCard
+                      key={item._id}
+                      item={item}
+                      isCompact={true}
+                      onToggleSave={handleToggleSave}
+                      onTranscribe={handleTranscribeCard}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 mb-8">
+                  {feeds.map((item) => (
+                    <FeedCard
+                      key={item._id}
+                      item={item}
+                      isCompact={false}
+                      onToggleSave={handleToggleSave}
+                      onTranscribe={handleTranscribeCard}
+                    />
+                  ))}
+                </div>
+              )
+            ) : (
+              <div className="py-16 text-center border border-gray-800/80 rounded-3xl bg-[#0f131f]/60 p-6 sm:p-8">
+                <AlertCircle className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                <h3 className="text-sm font-semibold text-gray-300 mb-1">No feed items found</h3>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
+                  {isSavedOnly
+                    ? 'You have not saved any items to your Vault yet. Click the "Save" star on any feed card to protect it from 14-day auto-purge.'
+                    : 'No stories match your current date or search filters. Try switching dates or run an immediate scrape.'}
+                </p>
+                {!isSavedOnly && (
+                  <button
+                    onClick={handleScrape}
+                    disabled={isScraping}
+                    className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white rounded-xl text-xs font-semibold shadow-md shadow-pink-500/25 transition-all inline-flex items-center gap-2 active:scale-95"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isScraping ? 'animate-spin' : ''}`} />
+                    <span>Run Scrape Pipeline Now</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Pagination Bar */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 py-4 border-t border-gray-800/60 mb-6">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs text-gray-400 font-medium px-3">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -343,6 +365,8 @@ export default function DashboardPage() {
         onScrape={handleScrape}
         isScraping={isScraping}
         savedCount={stats?.savedItems || 0}
+        activeView={activeView}
+        onSelectView={setActiveView}
       />
 
       {/* Monitored Priority Channels Modal */}

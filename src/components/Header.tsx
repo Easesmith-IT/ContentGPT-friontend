@@ -10,6 +10,8 @@ interface HeaderProps {
   onScrape: () => void;
   onPurge: () => void;
   onOpenChannels: () => void;
+  activeView: 'feed' | 'transcribe';
+  onSelectView: (view: 'feed' | 'transcribe') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +20,8 @@ export const Header: React.FC<HeaderProps> = ({
   onScrape,
   onPurge,
   onOpenChannels,
+  activeView,
+  onSelectView,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -42,6 +46,31 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Auto-Scrapes: <strong>09:00 AM & 08:00 PM</strong> • 14-day auto-purge</span>
               </p>
             </div>
+          </div>
+
+          {/* Main Studio Navigation Modes (Feed Radar vs Transcript Lab) */}
+          <div className="hidden sm:flex items-center gap-1 bg-[#090c14] p-1 rounded-xl border border-gray-800 text-xs shadow-inner">
+            <button
+              onClick={() => onSelectView('feed')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                activeView === 'feed'
+                  ? 'bg-pink-500/20 text-pink-200 border border-pink-500/30 font-semibold'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <span>Feed Radar</span>
+            </button>
+            <button
+              onClick={() => onSelectView('transcribe')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                activeView === 'transcribe'
+                  ? 'bg-pink-500/20 text-pink-200 border border-pink-500/30 font-semibold'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+              <span>Transcript Lab ⚡</span>
+            </button>
           </div>
 
           {/* Desktop Right Actions */}

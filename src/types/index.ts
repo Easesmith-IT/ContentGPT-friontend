@@ -46,3 +46,47 @@ export interface StorageStats {
   pendingPurgeCount: number;
   priorityChannelsCount: number;
 }
+
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  timestamp: string;
+  speaker?: string;
+  textOriginal: string;
+  textEnglish?: string;
+  textHinglish?: string;
+}
+
+export interface TranscriptItem {
+  _id: string;
+  sourcePlatform: 'YOUTUBE' | 'INSTAGRAM' | 'UPLOAD';
+  sourceUrl: string;
+  videoId?: string;
+  title: string;
+  creatorName: string;
+  thumbnailUrl?: string;
+  durationSeconds?: number;
+  segments: TranscriptSegment[];
+  cleanText: {
+    original: string;
+    english: string;
+    hinglish: string;
+  };
+  summary: string[];
+  keyQuotes: string[];
+  suggestedAngles: string[];
+  isSaved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScriptDraftResult {
+  format: 'SHORT' | 'LONG';
+  title: string;
+  estimatedDuration: string;
+  wordCount: number;
+  hookOptions?: { id: number; type: string; hook: string }[];
+  visualNotes?: string[];
+  chapterMarkers?: { timestamp: string; title: string }[];
+  scriptText: string;
+}
