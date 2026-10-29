@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TranscriptItem } from '../types';
 import {
   transcribeLink,
@@ -140,11 +140,19 @@ export const TranscriptLab: React.FC<TranscriptLabProps> = ({
     loadHistory();
   }, [historySearch]);
 
+  const lastProcessedUrlRef = useRef<string>('');
+
   // If initialUrl is passed from FeedCard "⚡ Transcribe", auto-populate and run
   useEffect(() => {
-    if (initialUrl && initialUrl !== urlInput) {
-      setUrlInput(initialUrl);
-      handleTranscribe(initialUrl);
+    const target = (initialUrl || '').trim();
+    if (!target) {
+      lastProcessedUrlRef.current = '';
+      return;
+    }
+    if (target !== lastProcessedUrlRef.current) {
+      lastProcessedUrlRef.current = target;
+      setUrlInput(target);
+      handleTranscribe(target);
       if (onClearInitialUrl) onClearInitialUrl();
     }
   }, [initialUrl]);
